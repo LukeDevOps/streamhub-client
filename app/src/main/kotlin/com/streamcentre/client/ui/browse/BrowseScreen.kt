@@ -2,14 +2,10 @@ package com.streamcentre.client.ui.browse
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
@@ -20,17 +16,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.tv.foundation.lazy.list.TvLazyRow
-import androidx.tv.foundation.lazy.list.items
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.tv.material3.Card
-import androidx.tv.material3.ExperimentalTvMaterial3Api
 import coil.compose.AsyncImage
 import com.streamcentre.client.api.ApiClient
 import com.streamcentre.client.api.HistoryItem
 import com.streamcentre.client.api.RecommendationItem
 import com.streamcentre.client.app
 
-@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun BrowseScreen(
     onSearchClick: () -> Unit,
@@ -115,7 +109,6 @@ fun BrowseScreen(
     }
 }
 
-@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun ContentRow(
     title: String,
@@ -130,7 +123,7 @@ private fun ContentRow(
         color = MaterialTheme.colorScheme.onBackground,
         modifier = Modifier.padding(bottom = 12.dp),
     )
-    TvLazyRow(
+    LazyRow(
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         contentPadding = PaddingValues(end = 16.dp),
     ) {
@@ -145,7 +138,6 @@ private fun ContentRow(
     }
 }
 
-@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun PosterCard(
     title: String,

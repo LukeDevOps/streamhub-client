@@ -55,13 +55,12 @@ fun AppNav(api: ApiClient) {
                 navArgument("duration") { type = NavType.FloatType; defaultValue = 0f },
             ),
         ) { back ->
-            val args = back.arguments!!
             PlayerScreen(
                 api = api,
-                hlsUrl = args.getString("url") ?: "",
-                contentId = args.getString("contentId") ?: "",
-                infoHash = args.getString("infoHash") ?: "",
-                durationSeconds = args.getFloat("duration"),
+                hlsUrl = back.arguments?.getString("url") ?: "",
+                contentId = back.arguments?.getString("contentId") ?: "",
+                infoHash = back.arguments?.getString("infoHash") ?: "",
+                durationSeconds = back.arguments?.getFloat("duration") ?: 0f,
                 onBack = { nav.popBackStack() },
             )
         }

@@ -11,8 +11,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.foundation.focusable
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.focusable
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.*
@@ -33,6 +33,11 @@ import com.streamcentre.client.api.ApiClient
 import com.streamcentre.client.app
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+
+private const val SEEK_SHORT_MS = 10_000L
+private const val SEEK_LONG_MS = 30_000L
+private const val CONTROLS_HIDE_DELAY_MS = 3_000L
+private const val POSITION_TICK_MS = 1_000L
 
 @OptIn(UnstableApi::class)
 @Composable
@@ -92,7 +97,7 @@ fun PlayerScreen(
     // Position ticker + periodic save
     LaunchedEffect(exoPlayer) {
         while (isActive) {
-            delay(1000)
+            delay(POSITION_TICK_MS)
             currentPositionMs = exoPlayer.currentPosition
             if (exoPlayer.isPlaying) {
                 vm.savePosition(exoPlayer.currentPosition, exoPlayer.duration.coerceAtLeast(durationMs))
@@ -100,9 +105,9 @@ fun PlayerScreen(
         }
     }
 
-    // Auto-hide controls after 3 seconds of inactivity
+    // Auto-hide controls after inactivity
     LaunchedEffect(controlsTimerKey) {
-        delay(3000)
+        delay(CONTROLS_HIDE_DELAY_MS)
         controlsVisible = false
     }
 
@@ -141,7 +146,7 @@ fun PlayerScreen(
                     }
 
                     Key.DirectionLeft -> {
-                        exoPlayer.seekTo((exoPlayer.currentPosition - 10_000).coerceAtLeast(0))
+                        exoPlayer.seekTo((exoPlayer.currentPosition - SEEK_SHORT_MS).coerceAtLeast(0))
                         controlsVisible = true
                         controlsTimerKey++
                         true
@@ -149,7 +154,7 @@ fun PlayerScreen(
 
                     Key.DirectionRight -> {
                         val max = exoPlayer.duration.takeIf { it > 0 } ?: Long.MAX_VALUE
-                        exoPlayer.seekTo((exoPlayer.currentPosition + 10_000).coerceAtMost(max))
+                        exoPlayer.seekTo((exoPlayer.currentPosition + SEEK_SHORT_MS).coerceAtMost(max))
                         controlsVisible = true
                         controlsTimerKey++
                         true
@@ -173,14 +178,14 @@ fun PlayerScreen(
 
                     Key.MediaFastForward -> {
                         val max = exoPlayer.duration.takeIf { it > 0 } ?: Long.MAX_VALUE
-                        exoPlayer.seekTo((exoPlayer.currentPosition + 30_000).coerceAtMost(max))
+                        exoPlayer.seekTo((exoPlayer.currentPosition + SEEK_LONG_MS).coerceAtMost(max))
                         controlsVisible = true
                         controlsTimerKey++
                         true
                     }
 
                     Key.MediaRewind -> {
-                        exoPlayer.seekTo((exoPlayer.currentPosition - 30_000).coerceAtLeast(0))
+                        exoPlayer.seekTo((exoPlayer.currentPosition - SEEK_LONG_MS).coerceAtLeast(0))
                         controlsVisible = true
                         controlsTimerKey++
                         true

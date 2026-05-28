@@ -17,13 +17,11 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.Card
-import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.streamcentre.client.api.ApiClient
 import com.streamcentre.client.api.SearchResult
 import com.streamcentre.client.api.StreamResponse
 import com.streamcentre.client.app
 
-@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun SearchScreen(
     initialQuery: String = "",
@@ -154,7 +152,6 @@ fun SearchScreen(
     }
 }
 
-@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun ResultCard(result: SearchResult, onClick: () -> Unit) {
     Card(
