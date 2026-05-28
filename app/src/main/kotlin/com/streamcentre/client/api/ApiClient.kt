@@ -56,11 +56,11 @@ class ApiClient(val baseUrl: String) {
             parameter("limit", limit)
         }.body()
 
-    suspend fun getPosterUrl(tmdbId: Int, type: String): String =
-        http.get("$baseUrl/poster") {
-            parameter("tmdbId", tmdbId)
-            parameter("type", type)
-        }.body<PosterResponse>().url
+    fun posterImageUrl(tmdbId: Int, type: String): String =
+        "$baseUrl/poster/img?tmdbId=$tmdbId&type=$type"
+
+    suspend fun getAllResume(): Map<String, ResumePosition> =
+        http.get("$baseUrl/resume").body()
 
     suspend fun getResume(infoHash: String): ResumePosition =
         http.get("$baseUrl/resume/$infoHash").body()

@@ -21,9 +21,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.tv.material3.Card
 import coil.compose.AsyncImage
 import com.streamcentre.client.api.ApiClient
-import com.streamcentre.client.api.HistoryItem
-import com.streamcentre.client.api.RecommendationItem
 import com.streamcentre.client.app
+
+private data class BrowseItem(
+    val title: String,
+    val tmdbId: Int,
+    val type: String,
+    val progress: Float? = null,
+)
 
 @Composable
 fun BrowseScreen(
@@ -34,6 +39,7 @@ fun BrowseScreen(
 ) {
     val recommendations by vm.recommendations.collectAsStateWithLifecycle()
     val history by vm.history.collectAsStateWithLifecycle()
+    val resumePositions by vm.resumePositions.collectAsStateWithLifecycle()
     val isLoading by vm.isLoading.collectAsStateWithLifecycle()
     val error by vm.error.collectAsStateWithLifecycle()
 
@@ -89,8 +95,13 @@ fun BrowseScreen(
                 if (history.isNotEmpty()) {
                     ContentRow(
                         title = "Continue Watching",
-                        items = history.map { it.displayTitle to it.tmdbId.toString() },
-                        type = "show",
+                        items = history.map { item ->
+                            val pos = resumePositions[item.contentId]
+                            val progress = if (pos != null && pos.duration > 0)
+                                (pos.position.toFloat() / pos.duration).coerceIn(0f, 1f)
+                            else null
+                            BrowseItem(item.displayTitle, item.tmdbId, item.mediaType, progress)
+                        },
                         onSelect = { title -> onItemSelected(title) },
                     )
                     Spacer(Modifier.height(32.dp))
@@ -99,8 +110,7 @@ fun BrowseScreen(
                 if (recommendations.isNotEmpty()) {
                     ContentRow(
                         title = "Recommended",
-                        items = recommendations.map { it.title to it.ids.tmdb.toString() },
-                        type = "movie",
+                        items = recommendations.map { BrowseItem(it.title, it.ids.tmdb, "movie") },
                         onSelect = { title -> onItemSelected(title) },
                     )
                 }
@@ -112,8 +122,7 @@ fun BrowseScreen(
 @Composable
 private fun ContentRow(
     title: String,
-    items: List<Pair<String, String>>,
-    type: String,
+    items: List<BrowseItem>,
     onSelect: (String) -> Unit,
 ) {
     Text(
@@ -127,12 +136,13 @@ private fun ContentRow(
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         contentPadding = PaddingValues(end = 16.dp),
     ) {
-        items(items) { (itemTitle, tmdbId) ->
+        items(items) { item ->
             PosterCard(
-                title = itemTitle,
-                tmdbId = tmdbId.toIntOrNull() ?: 0,
-                type = type,
-                onClick = { onSelect(itemTitle) },
+                title = item.title,
+                tmdbId = item.tmdbId,
+                type = item.type,
+                progress = item.progress,
+                onClick = { onSelect(item.title) },
             )
         }
     }
@@ -143,16 +153,11 @@ private fun PosterCard(
     title: String,
     tmdbId: Int,
     type: String,
+    progress: Float? = null,
     onClick: () -> Unit,
 ) {
     val api = LocalContext.current.app.api
-    var posterUrl by remember { mutableStateOf<String?>(null) }
-
-    LaunchedEffect(tmdbId) {
-        if (tmdbId > 0) {
-            runCatching { posterUrl = api.getPosterUrl(tmdbId, type) }
-        }
-    }
+    val posterUrl = if (tmdbId > 0) api.posterImageUrl(tmdbId, type) else null
 
     Card(
         onClick = onClick,
@@ -196,6 +201,22 @@ private fun PosterCard(
                     color = Color.White,
                     maxLines = 2,
                 )
+            }
+            if (progress != null && progress > 0f) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .height(3.dp)
+                        .background(Color.White.copy(alpha = 0.3f)),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .fillMaxWidth(progress)
+                            .background(MaterialTheme.colorScheme.primary),
+                    )
+                }
             }
         }
     }

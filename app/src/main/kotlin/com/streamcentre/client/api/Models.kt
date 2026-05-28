@@ -40,6 +40,11 @@ data class HistoryItem(
     }
     val tmdbId: Int get() = movie?.ids?.tmdb ?: show?.ids?.tmdb ?: 0
     val mediaType: String get() = if (type == "movie") "movie" else "show"
+    val contentId: String get() = when (type) {
+        "movie" -> "movie:${movie?.ids?.tmdb ?: 0}"
+        "episode" -> "show:${show?.ids?.tmdb ?: 0}:s${episode?.season ?: 0}e${episode?.number ?: 0}"
+        else -> ""
+    }
     val searchQuery: String get() = when (type) {
         "movie" -> movie?.title ?: ""
         "episode" -> show?.title?.let { title ->

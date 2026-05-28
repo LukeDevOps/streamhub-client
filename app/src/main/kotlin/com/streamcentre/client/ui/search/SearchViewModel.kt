@@ -7,6 +7,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.streamcentre.client.api.ApiClient
 import com.streamcentre.client.api.SearchResult
 import com.streamcentre.client.api.StreamResponse
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -28,20 +29,36 @@ class SearchViewModel(private val api: ApiClient) : ViewModel() {
     private val _error = MutableStateFlow<String?>(null)
     val error = _error.asStateFlow()
 
+    private val _hasSearched = MutableStateFlow(false)
+    val hasSearched = _hasSearched.asStateFlow()
+
+    private var searchJob: Job? = null
+
     fun search(query: String, category: Int = ApiClient.CATEGORY_MOVIES) {
         if (query.isBlank()) return
-        viewModelScope.launch {
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch {
             _isSearching.value = true
             _error.value = null
             _results.value = emptyList()
             try {
                 _results.value = api.search(query, category)
+                _hasSearched.value = true
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) return@launch
                 _error.value = e.message ?: "Search failed"
             } finally {
                 _isSearching.value = false
             }
         }
+    }
+
+    fun clearResults() {
+        searchJob?.cancel()
+        _results.value = emptyList()
+        _error.value = null
+        _isSearching.value = false
+        _hasSearched.value = false
     }
 
     fun startStream(result: SearchResult) {
