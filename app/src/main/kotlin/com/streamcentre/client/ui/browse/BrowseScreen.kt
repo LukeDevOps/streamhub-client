@@ -11,12 +11,13 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -33,7 +34,6 @@ import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.Density
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -44,6 +44,8 @@ import androidx.tv.material3.CardDefaults
 import coil.compose.AsyncImage
 import com.streamcentre.client.api.ApiClient
 import com.streamcentre.client.app
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 private val FOCUS_SPRING = spring<Float>(
@@ -85,23 +87,32 @@ fun BrowseScreen(
     var dotInitialized by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
+    val scrollState = rememberScrollState()
 
-    fun onFocused(coords: LayoutCoordinates) {
-        val bounds = coords.boundsInRoot()
-        val targetX = bounds.center.x
-        val dotOffsetPx = 15f * density.density
-        val targetY = bounds.bottom + dotOffsetPx
-        if (!dotInitialized) {
-            scope.launch {
+    fun onFocused(getCoords: () -> LayoutCoordinates?, listState: LazyListState? = null) {
+        scope.launch {
+            launch { dotAlpha.animateTo(1f, tween(80)) }
+            // Let column scroll start, then wait for it to finish.
+            delay(16)
+            snapshotFlow { scrollState.isScrollInProgress }.first { !it }
+            // Let LazyRow scroll start (if any), then wait for it to finish.
+            if (listState != null) {
+                delay(16)
+                snapshotFlow { listState.isScrollInProgress }.first { !it }
+            }
+            delay(16)
+            val coords = getCoords() ?: return@launch
+            val bounds = coords.boundsInRoot()
+            val targetX = bounds.center.x
+            val targetY = bounds.bottom + 15f * density.density
+            if (!dotInitialized) {
                 dotX.snapTo(targetX)
                 dotY.snapTo(targetY)
-                dotAlpha.animateTo(1f, tween(150))
                 dotInitialized = true
+            } else {
+                launch { dotX.animateTo(targetX, FOCUS_SPRING) }
+                launch { dotY.animateTo(targetY, FOCUS_SPRING) }
             }
-        } else {
-            scope.launch { dotAlpha.animateTo(1f, tween(80)) }
-            scope.launch { dotX.animateTo(targetX, FOCUS_SPRING) }
-            scope.launch { dotY.animateTo(targetY, FOCUS_SPRING) }
         }
     }
 
@@ -114,7 +125,7 @@ fun BrowseScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .padding(start = 48.dp, top = 32.dp, end = 48.dp, bottom = 48.dp),
         ) {
             var searchCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
@@ -128,13 +139,10 @@ fun BrowseScreen(
                         .graphicsLayer { scaleX = searchScale; scaleY = searchScale }
                         .border(1.dp, Color.White, RoundedCornerShape(50))
                         .focusRequester(searchFocusRequester)
-                        .onGloballyPositioned { coords ->
-                            searchCoords = coords
-                            if (searchFocused) onFocused(coords)
-                        }
+                        .onGloballyPositioned { searchCoords = it }
                         .onFocusChanged { state ->
                             searchFocused = state.isFocused
-                            if (state.isFocused) searchCoords?.let(::onFocused)
+                            if (state.isFocused) onFocused({ searchCoords })
                         }
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
@@ -177,7 +185,7 @@ fun BrowseScreen(
                                 BrowseItem(item.displayTitle, item.tmdbId, item.mediaType, progress)
                             },
                             onSelect = { onItemSelected(it) },
-                            onFocused = ::onFocused,
+                            onFocused = { getCoords, listState -> onFocused(getCoords, listState) },
                         )
                         Spacer(Modifier.height(32.dp))
                     }
@@ -187,7 +195,7 @@ fun BrowseScreen(
                             title = "Recommended",
                             items = recommendations.map { BrowseItem(it.title, it.ids.tmdb, "movie") },
                             onSelect = { onItemSelected(it) },
-                            onFocused = ::onFocused,
+                            onFocused = { getCoords, listState -> onFocused(getCoords, listState) },
                         )
                     }
                 }
@@ -209,8 +217,9 @@ private fun ContentRow(
     title: String,
     items: List<BrowseItem>,
     onSelect: (String) -> Unit,
-    onFocused: (LayoutCoordinates) -> Unit,
+    onFocused: (getCoords: () -> LayoutCoordinates?, listState: LazyListState) -> Unit,
 ) {
+    val listState = rememberLazyListState()
     Text(
         text = title,
         fontSize = 20.sp,
@@ -219,6 +228,7 @@ private fun ContentRow(
         modifier = Modifier.padding(bottom = 12.dp),
     )
     LazyRow(
+        state = listState,
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         contentPadding = PaddingValues(top = 10.dp, bottom = 24.dp, end = 16.dp),
     ) {
@@ -229,7 +239,7 @@ private fun ContentRow(
                 type = item.type,
                 progress = item.progress,
                 onClick = { onSelect(item.title) },
-                onFocused = onFocused,
+                onFocused = { getCoords -> onFocused(getCoords, listState) },
             )
         }
     }
@@ -242,13 +252,12 @@ private fun PosterCard(
     type: String,
     progress: Float? = null,
     onClick: () -> Unit,
-    onFocused: (LayoutCoordinates) -> Unit,
+    onFocused: (() -> LayoutCoordinates?) -> Unit,
 ) {
     val api = LocalContext.current.app.api
     val posterUrl = if (tmdbId > 0) api.posterImageUrl(tmdbId, type) else null
     var cardCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
     var focused by remember { mutableStateOf(false) }
-    var isFocused by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(
         targetValue = if (focused) 1.06f else 1f,
         animationSpec = FOCUS_SPRING,
@@ -262,14 +271,10 @@ private fun PosterCard(
             .width(140.dp)
             .height(210.dp)
             .graphicsLayer { scaleX = scale; scaleY = scale }
-            .onGloballyPositioned { coords ->
-                cardCoords = coords
-                if (isFocused) onFocused(coords)
-            }
+            .onGloballyPositioned { cardCoords = it }
             .onFocusChanged { state ->
-                isFocused = state.isFocused
                 focused = state.isFocused
-                if (state.isFocused) cardCoords?.let(onFocused)
+                if (state.isFocused) onFocused { cardCoords }
             },
     ) {
         Box(Modifier.fillMaxSize()) {
