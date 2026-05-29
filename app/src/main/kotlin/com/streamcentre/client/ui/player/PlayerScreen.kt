@@ -60,6 +60,7 @@ fun PlayerScreen(
                 .setMimeType(MimeTypes.APPLICATION_M3U8)
                 .build()
             setMediaItem(mediaItem)
+            playWhenReady = true
             prepare()
         }
     }
@@ -85,12 +86,11 @@ fun PlayerScreen(
         onDispose { exoPlayer.removeListener(listener) }
     }
 
-    // Load resume position and start playback
+    // Load resume position and seek; playback already started via playWhenReady
     LaunchedEffect(Unit) {
         vm.initialize(contentId, infoHash)
         val resumePos = vm.getResumePosition()
         if (resumePos > 0) exoPlayer.seekTo(resumePos * 1000L)
-        exoPlayer.playWhenReady = true
         vm.scrobble("start", 0.0)
     }
 

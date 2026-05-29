@@ -235,6 +235,7 @@ private fun ResultRow(result: SearchResult, onClick: () -> Unit) {
                 shape = RoundedCornerShape(6.dp),
             ),
         ),
+        scale = CardDefaults.scale(focusedScale = 1.03f),
     ) {
         Row(
             modifier = Modifier

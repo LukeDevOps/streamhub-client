@@ -10,8 +10,10 @@ import io.ktor.client.request.get
 import io.ktor.client.request.parameter
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
+import io.ktor.http.isSuccess
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 
@@ -39,11 +41,16 @@ class ApiClient(val baseUrl: String) {
             parameter("category", category)
         }.body()
 
-    suspend fun stream(magnetUrls: List<String>): StreamResponse =
-        http.post("$baseUrl/stream") {
+    suspend fun stream(magnetUrls: List<String>): StreamResponse {
+        val response = http.post("$baseUrl/stream") {
             contentType(ContentType.Application.Json)
             setBody(mapOf("magnetUrls" to magnetUrls))
-        }.body()
+        }
+        if (!response.status.isSuccess()) {
+            throw Exception("Content not available yet — try a different source")
+        }
+        return response.body()
+    }
 
     suspend fun getHistory(limit: Int = 20): List<HistoryItem> =
         http.get("$baseUrl/trakt/history") {

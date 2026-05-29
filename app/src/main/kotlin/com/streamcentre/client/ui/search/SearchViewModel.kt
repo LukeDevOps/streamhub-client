@@ -68,7 +68,9 @@ class SearchViewModel(private val api: ApiClient) : ViewModel() {
             try {
                 _streamResult.value = api.stream(listOf(result.magnetUrl))
             } catch (e: Exception) {
-                _error.value = e.message ?: "Failed to start stream"
+                if (e is kotlinx.coroutines.CancellationException) return@launch
+                _error.value = e.message ?: "Content not available — try a different source"
+            } finally {
                 _isStartingStream.value = false
             }
         }
