@@ -22,18 +22,23 @@ fun AppNav(api: ApiClient) {
             BrowseScreen(
                 api = api,
                 onSearchClick = { nav.navigate("search") },
-                onItemSelected = { title -> nav.navigate("search?query=${Uri.encode(title)}") },
+                onItemSelected = { title, category -> nav.navigate("search?query=${Uri.encode(title)}&category=$category") },
             )
         }
 
         composable(
-            route = "search?query={query}",
-            arguments = listOf(navArgument("query") { defaultValue = "" }),
+            route = "search?query={query}&category={category}",
+            arguments = listOf(
+                navArgument("query") { defaultValue = "" },
+                navArgument("category") { type = NavType.IntType; defaultValue = ApiClient.CATEGORY_MOVIES },
+            ),
         ) { back ->
             val query = back.arguments?.getString("query") ?: ""
+            val category = back.arguments?.getInt("category") ?: ApiClient.CATEGORY_MOVIES
             SearchScreen(
                 api = api,
                 initialQuery = query,
+                initialCategory = category,
                 onPlay = { url, contentId, infoHash, duration ->
                     nav.navigate(
                         "player?" +

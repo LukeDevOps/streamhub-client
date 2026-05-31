@@ -100,3 +100,10 @@ data class ResumePosition(
 data class PosterResponse(
     val url: String,
 )
+
+@Serializable
+data class Suggestion(
+    val id: Int,
+    val title: String,
+    val year: String,
+)

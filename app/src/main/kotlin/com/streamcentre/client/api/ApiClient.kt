@@ -35,6 +35,12 @@ class ApiClient(val baseUrl: String) {
         }
     }
 
+    suspend fun suggest(query: String, category: Int = CATEGORY_MOVIES): List<Suggestion> =
+        http.get("$baseUrl/suggest") {
+            parameter("query", query)
+            parameter("type", if (category == CATEGORY_TV) "show" else "movie")
+        }.body()
+
     suspend fun search(query: String, category: Int = CATEGORY_MOVIES): List<SearchResult> =
         http.get("$baseUrl/search") {
             parameter("query", query)

@@ -60,6 +60,7 @@ dependencies {
     implementation(libs.compose.ui)
     implementation(libs.compose.ui.tooling.preview)
     implementation(libs.compose.material3)
+    implementation("androidx.compose.material:material-icons-core")
     implementation(libs.compose.animation)
 
     implementation(libs.tv.foundation)

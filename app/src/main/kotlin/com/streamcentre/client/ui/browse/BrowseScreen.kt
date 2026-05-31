@@ -4,7 +4,8 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -51,7 +52,7 @@ private data class BrowseItem(
 @Composable
 fun BrowseScreen(
     onSearchClick: () -> Unit,
-    onItemSelected: (title: String) -> Unit,
+    onItemSelected: (title: String, category: Int) -> Unit,
     api: ApiClient = LocalContext.current.app.api,
     vm: BrowseViewModel = viewModel(factory = BrowseViewModel.factory(api)),
 ) {
@@ -82,26 +83,27 @@ fun BrowseScreen(
             .padding(start = 48.dp, top = 32.dp, end = 48.dp, bottom = 48.dp),
     ) {
         Box(
-            modifier = Modifier.fillMaxWidth(),
-            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .graphicsLayer { scaleX = searchScale; scaleY = searchScale }
+                .background(
+                    color = if (searchFocused) Color.White.copy(alpha = 0.12f) else Color.Transparent,
+                    shape = RoundedCornerShape(12.dp),
+                )
+                .focusRequester(searchFocusRequester)
+                .onFocusChanged { state -> searchFocused = state.isFocused }
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onSearchClick,
+                )
+                .padding(10.dp),
         ) {
-            Box(
-                modifier = Modifier
-                    .width(320.dp)
-                    .graphicsLayer { scaleX = searchScale; scaleY = searchScale }
-                    .border(1.dp, Color.White, RoundedCornerShape(50))
-                    .focusRequester(searchFocusRequester)
-                    .onFocusChanged { state -> searchFocused = state.isFocused }
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = onSearchClick,
-                    )
-                    .padding(vertical = 10.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text("Search", color = Color.White, fontSize = 14.sp)
-            }
+            Icon(
+                imageVector = Icons.Filled.Search,
+                contentDescription = "Search",
+                tint = Color.White,
+                modifier = Modifier.size(28.dp),
+            )
         }
 
         Spacer(Modifier.height(32.dp))
@@ -132,7 +134,10 @@ fun BrowseScreen(
                             else null
                             BrowseItem(item.displayTitle, item.tmdbId, item.mediaType, progress)
                         },
-                        onSelect = { onItemSelected(it) },
+                        onSelect = { item ->
+                            val cat = if (item.type == "movie") ApiClient.CATEGORY_MOVIES else ApiClient.CATEGORY_TV
+                            onItemSelected(item.title, cat)
+                        },
                     )
                     Spacer(Modifier.height(32.dp))
                 }
@@ -141,7 +146,7 @@ fun BrowseScreen(
                     ContentRow(
                         title = "Recommended",
                         items = recommendations.map { BrowseItem(it.title, it.ids.tmdb, "movie") },
-                        onSelect = { onItemSelected(it) },
+                        onSelect = { item -> onItemSelected(item.title, ApiClient.CATEGORY_MOVIES) },
                     )
                 }
             }
@@ -153,7 +158,7 @@ fun BrowseScreen(
 private fun ContentRow(
     title: String,
     items: List<BrowseItem>,
-    onSelect: (String) -> Unit,
+    onSelect: (BrowseItem) -> Unit,
 ) {
     Text(
         text = title,
@@ -172,7 +177,7 @@ private fun ContentRow(
                 tmdbId = item.tmdbId,
                 type = item.type,
                 progress = item.progress,
-                onClick = { onSelect(item.title) },
+                onClick = { onSelect(item) },
             )
         }
     }
